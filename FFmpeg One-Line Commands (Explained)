@@ -1,0 +1,114 @@
+🎬 FFmpeg One-Line Commands (Explained)
+1️⃣ Concatenate 6s Segments (Stream Copy Mode)
+🔹 適用條件
+
+兩段影片 解析度 / FPS / 編碼完全相同
+
+🔹 檔名準備
+
+建立 list.txt：
+
+file 'segment_A_6s.mp4'
+file 'segment_B_6s.mp4'
+🔹 指令
+ffmpeg -f concat -safe 0 -i list.txt -c copy two_tigers_12s.mp4
+🔹 說明
+參數	說明
+-f concat	使用 concat demuxer
+-safe 0	允許非相對安全路徑
+-i list.txt	讀取影片清單
+-c copy	不重新編碼（無畫質損失）
+🔹 工程意義
+
+不產生二次壓縮
+
+保持原始畫質
+
+執行速度快
+
+可重現性高
+
+2️⃣ Concatenate with Re-encoding (If Needed)
+🔹 適用條件
+
+若兩段影片 編碼參數不同
+
+🔹 指令
+ffmpeg -i segment_A_6s.mp4 -i segment_B_6s.mp4 -filter_complex "[0:v][1:v]concat=n=2:v=1:a=0[v]" -map "[v]" -c:v libx264 -pix_fmt yuv420p two_tigers_12s.mp4
+🔹 說明
+參數	說明
+-filter_complex	使用濾鏡串接
+concat=n=2	合併 2 段影片
+-c:v libx264	重新編碼為 H.264
+-pix_fmt yuv420p	提高播放器相容性
+3️⃣ Remove Embedded Audio (Make Silent Video)
+🔹 指令
+ffmpeg -i two_tigers_12s.mp4 -c copy -an two_tigers_12s_silent.mp4
+🔹 說明
+參數	說明
+-c copy	保持影片流不變
+-an	移除 audio stream
+🔹 工程目的
+
+移除語音型嘴型誤差
+
+防止音高不準
+
+為 UTAU 聲音整合做準備
+
+4️⃣ Merge UTAU Singing Voice
+🔹 指令（推薦）
+ffmpeg -i two_tigers_12s_silent.mp4 -i two_tigers.wav -c:v copy -c:a aac -shortest two_tigers_final.mp4
+🔹 說明
+參數	說明
+-c:v copy	保持原影片不壓縮
+-c:a aac	將 WAV 轉為 AAC
+-shortest	以最短流為準避免黑畫面
+5️⃣ Strict Duration Control (Exact 12s)
+
+若需要完全對齊 12 秒：
+
+ffmpeg -i two_tigers_12s_silent.mp4 -i two_tigers.wav -t 12 -c:v copy -c:a aac two_tigers_final.mp4
+🔹 工程意義
+
+完全對齊 BPM 模型
+
+保證 deterministic duration
+
+避免尾端多 0.1~0.2 秒漂移
+
+🎼 對應 Musical Timing Model
+參數	數值
+BPM	80
+1 beat	0.75 sec
+1 measure (4/4)	3 sec
+2 measures	6 sec
+2 segments	12 sec
+
+因此：
+
+2 x 6s segments → 12s deterministic MV
+🔁 完整 One-Line Pipeline 總覽
+ffmpeg -f concat -safe 0 -i list.txt -c copy two_tigers_12s.mp4
+ffmpeg -i two_tigers_12s.mp4 -c copy -an two_tigers_12s_silent.mp4
+ffmpeg -i two_tigers_12s_silent.mp4 -i two_tigers.wav -c:v copy -c:a aac -shortest two_tigers_final.mp4
+
+三行完成整個 deterministic assembly。
+
+🧠 為什麼這樣設計？
+
+這套設計符合：
+
+模組化
+
+無重編碼畫質損失
+
+可重現
+
+可跨平台
+
+低硬體需求
+
+它將 stochastic AI generation 轉換為：
+
+Beat-aligned deterministic multimedia assembly workflow
